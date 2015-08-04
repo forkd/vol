@@ -1,0 +1,134 @@
+#!/bin/bash
+# NAME ........: rc.randomWallpapers
+# VERSION .....: 0.5
+# AUTHOR ......: José Lopes de Oliveira Júnior
+# DESCRIPTION .: Escolhe um wallpaper (papel de parede) aleatóriamente, dentro
+#    de um diretório de wallpapers, e torna-o visível para a sessão.
+# OBSERVATION .: O que este script faz é, selecionar, aleatóriamente, um arquivo
+#    de imagem, dentro de um diretório informado e alterar a configuração do Window
+#    Manager especificado, para que ele utilize o wallpaper escolhido pelo script.
+#    Este script utiliza um arquivo de configuração localizado em
+#    $HOME/.randomwallpapers. Caso este arquivo não exista, ou sua sintaxe esteja
+#    errada, o script não funcionará. A sintaxe deste arquivo é simples: a PRIMEIRA
+#    linha do arquivo deve conter o caminho COMPLETO do repositório de wallpapers,
+#    como $HOME/wallpapers. A ÚLTIMA linha do arquivo deve conter o Window Manager
+#    que será configurado e o nome deve ser válido para o script, observando letras
+#    maiúsculas e minúsculas (este script utiliza apenas letras minúsculas). Entre
+#    estas linhas pode-se ser colocado qualquer conteúdo, inclusive comentários.
+#    Nomes de Window Managers válidos para esta versão são: kde e fluxbox
+# NOTE ........: O usuário pode uma chamada para execução deste script em qualquer
+#    arquivo de evento do sistema, como inicialização do sistema, inicialização do
+#    modo gráfico, desligamento do sistema e etc. Lembre-se de dar permissão de
+#    execução para o script (755).
+# WARNINGS ....: ASSEGURE-SE DE QUE NÃO HAJA ESPAÇO(S) NO NOME DE NENHUM ARQUIVO
+#    DE WALLPAPER! A NÃO OBSERVÂNCIA DESTE AVISO ACARRETARÁ NO NÃO FUNCIONAMENTO
+#    DESTE SCRIPT! ALÉM DISSO, É DE EXTREMA IMPORTÂNCIA QUE HAJAM SOMENTE ARQUIVOS
+#    DE IMAGENS NO REPOSITÓRIO DE WALLPAPERS ESPECIFICADO!
+#    LEMBRE-SE AINDA DE INFORMAR, NO CAMINHO DO REPOSITÓRIO DE WALLPAPERS, O CAMINHO
+#    COMPLETO DO MESMO, POIS, EM CASO CONTRÁRIO, O WALLPAPER NÃO SERÁ AJUSTADO
+#    CORRETAMENTE!
+
+# operationFailed
+# Função executada caso haja falha na execução do script.
+operationFailed ()
+{
+   echo "Failed to select a random wallpaper."
+   echo "Possible causes: Some or all the paths doesn't exist or you don't have"
+   echo "   permission to read or to write they."
+   
+   exit 1
+} # operationFailed
+
+# configFluxbox
+# Configura o Fluxbox para exibir o wallpaper escolhido pelo script.
+configFluxbox ()
+{
+   #    Verificando se o arquivo de configuração de wallpapers do Fluxbox existe
+   # e se o mesmo possui permissão de escrita.
+   if [ -f $HOME/.fluxbox/lastwallpaper -a -w $HOME/.fluxbox/lastwallpaper ]; then
+      WPFLUXBOX="|"$WPPATH"|:0.0"
+      echo $WPFLUXBOX > $HOME/.fluxbox/lastwallpaper
+   else
+      # Erro
+      operationFailed
+   fi
+} # configFluxbox
+
+# configKDE
+# Configura o KDE para exibir o wallpaper escolhido pelo script.
+configKDE ()
+{
+   #    Verificando se o arquivo de configuração de wallpapers do KDE existe
+   # e se o mesmo possui permissão de escrita.
+   if [ -f $HOME/.kde/share/config/kdesktoprc -a -w $HOME/.kde/share/config/kdesktoprc ]; then
+      cat $HOME/.kde/share/config/kdesktoprc | sed -e "s,^Wallpaper=.*,Wallpaper=`echo $WPPATH`," > $HOME/.kde/share/config/kdesktoprc
+   fi
+} # configKDE
+
+# INÍCIO DO SCRIPT PRINCIPAL
+
+# Verificando se o arquivo de configuração do script existe para o usuário
+if [ -f $HOME/.randomWallpapers ]; then
+   # Definindo o repositório de wallpapers.
+   WPSDIR=`head -1 $HOME/.randomWallpapers`
+
+   # Verificando se o repositório existe.
+   if [ -d "$WPSDIR" ]; then
+      # Definindo o Window Manager escolhido.
+      WM=`tail -1 $HOME/.randomWallpapers`
+
+      # Definindo qual foi o Window Manager selecionado
+      case "$WM" in
+         "kde")
+            WM="kde"
+            ;;
+         "fluxbox")
+            WM="fluxbox"
+            ;;
+         *)
+            echo "The specified Window Manager is not valid for this script."
+            exit 1
+      esac
+   else
+      operationFailed
+   fi
+else
+   exit 0
+fi
+
+# Imprimindo uma mensagem para o usuário.
+echo "Selecting a random wallpaper..."
+
+# Escolhendo o wallpaper aleatóriamente e obtendo o caminho completo dele.
+if [ -r $WPSDIR ]; then
+   # Armazenando a listagem de wallpapers.
+   WPS=`/bin/ls -1 $WPSDIR`
+
+   # Calculando o número de arquivos de wallpapers do diretório.
+   NWPS=`echo $WPS | wc -w`
+
+   # Selecionando um número, aleatóriamente, entre 1 e o valor de NWPS.
+   ((NWPS=RANDOM%NWPS+1))
+
+   # Armazenando o nome do arquivo na posição escolhida aleatóriamente.
+   WP=`echo $WPS | cut -d ' ' -f $NWPS`
+
+   # Obtendo o caminho completo do wallpaper escolhido
+   WPPATH=$WPSDIR/$WP
+else
+   # Erro
+   operationFailed
+fi
+
+case "$WM" in
+   "kde")
+      configKDE
+      ;;
+   
+   "fluxbox")
+      configFluxbox
+      ;;
+esac
+
+# Saindo com sucesso
+exit 0

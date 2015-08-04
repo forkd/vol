@@ -1,0 +1,62 @@
+#!/bin/bash
+# NAME ........: pskiller
+# AUTHOR ......: José Lopes de Oliveira Júnior
+# DESCRIPTION .:
+# Kills a process by a name. But it accepts non complete names, like
+#    netsc for NETSCape, or mac for eMACs. It also accepts the signal to kill
+#    the processes. A list of process can be eigther passed to the script, even
+#    combined with a process signal for all processes, like in the examples:
+#       $ pskiller ema fire soffice kick
+#       $ pskiller -9 xmm
+# WARNING : Be sure to put on the processes' list, not ambigous names, like
+#   kde, for example, because it'll kill all processes that have this pattern on
+#   their names (all process that have in their names, the kde pattern, for
+#   example).
+# OBSERVATION .: Give it 700 permition for a single user, or 755 for more users.
+
+SIG="-SIGTERM" # Default signal
+
+# Verifying the parameters
+if [ "$#" -lt 1 ]; then
+   echo "Usage: pskiller [-SIGNAL] pattern"
+   return
+fi
+
+# The signal was defined by the user?
+if [ "$#" -gt 1 ]; then
+   # If the 1st parameter begins with '-', then it's a signal.
+   case "$1" in
+      # Redefine the signal and remove it from the parameters' vector
+      -* )
+         SIG=$1
+         shift
+      ;;
+   esac
+fi
+
+# Processes PID & NAME and a control variable
+PID="" PNAME="" CONTROL="NO"
+
+# Evaluates all parameters
+for PNAME in "$@"; do
+   for PID in `ps x --format pid,comm | \
+      sed -n "s/^ *\([0-9][0-9]*\) [^ ]*$PNAME.*/\1/p"`; do
+      CONTROL="YES" # The informed process exists
+      
+      echo -e "Trying to kill process $PNAME ($PID) with signal $SIG... \c"
+      
+      kill $SIG $PID > /dev/null # Kill and don't show any messages
+      
+      echo "done."
+   done
+   
+   # The informed process does not exists
+   if [ $CONTROL = "NO" ]; then
+      echo "Process $PNAME not found."
+   fi
+   
+   # Restarting the control variable
+   CONTROL="NO"
+done
+
+# EOF

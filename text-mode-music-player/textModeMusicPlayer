@@ -1,0 +1,105 @@
+#!/bin/bash
+# AUTHOR ......: José Lopes de Oliveira Júnior
+# NAME ........: textMusicModePlayer
+# VERSION .....: 0.5
+# DESCRIPTION .: Este script cria uma interface entre o usuário e seu player de
+#    música de modo texto, possibilitando que o usuário escolha como quer ouvir
+#    suas músicas (de forma contínua ou aleatória) e informando o diretório onde
+#    se encontram as músicas. Feito isso, o script se encarrega de gerenciar a
+#    forma com que as músicas são tocadas, evitando que o usuário tenha que, a
+#    todo momento, mandar tocar outra música.
+# WARNINGS ....: Este script usa o comando PLAY, do pacote SOX (Sound eXchange),
+#    por isso requer que este pacote esteja instalado e configurado no sistema.
+#    O usuário deve se lembrar que, ao informar o diretório onde se encontram
+#    as músicas, o caminho completo do mesmo deve ser informado. Além disso,
+#    é de suma importância que hajam APENAS músicas neste diretório  e que,
+#    nos nomes dos arquivos das músicas, NÃO hajam espaços! Caso estes avisos
+#    não sejam observados, o autor não garante como o script se comportará.
+
+# FUNÇÕES NECESSÁRIAS AO SCRIPT
+
+# usage
+# Mostra ao usuário, a maneira correta de se usar o script.
+usage()
+{
+   echo "Usage $0 [options] [musics_complete_path]"
+   echo "Where options is \"-c\" or \"-s\", to play"
+   echo "   continous ou shuffle."
+   exit 1
+} # usage
+
+# playContinous
+# Toca a listagem de músicas de forma contínua - da primeira até a última música.
+playContinous()
+{
+   i=1
+   
+   # Varia, da primeira, até a última música.
+   while [ $i -le $NFILES ]; do
+      # Obtém a música, na posição escolhida aleatóriamente.
+      MUSIC=`echo $FILES | cut -d ' ' -f $i`
+      
+      # Gera o caminho completo da música.
+      MUSICPATH=$REPOSITORIO/$MUSIC
+      
+      # Toca a música...
+      play $MUSICPATH 2> /dev/null
+      
+      # Incrementando a variável de controle, em um.
+      i=`echo "$i + 1" | bc`
+   done
+} # playContinous
+
+# playShuffle
+# Toca a listagem de músicas de forma aleatória, infinitamente.
+playShuffle()
+{
+   # Loop eterno.
+   while [ 7 = 7 ]; do
+      # Escolhe um número aleatório, entre 1 e o número de arquivos.
+      ((NUMBER=RANDOM%NFILES+1))
+      
+      # Obtém a música, na posição escolhida aleatóriamente.
+      MUSIC=`echo $FILES | cut -d ' ' -f $NUMBER`
+      
+      # Gera o caminho completo da música.
+      MUSICPATH=$REPOSITORIO/$MUSIC
+      
+      # Toca a música...
+      play $MUSICPATH 2> /dev/null
+   done
+} # playShuffle
+
+# ---> INÍCIO DA EXECUÇÃO DO SCRIPT
+
+# Verificando o número de parâmetros passados ao script.
+if [ $# -lt 2 ]; then
+   usage
+fi
+
+# O caminho COMPLETO do repositório, passado ao script.
+REPOSITORIO=$2
+
+# A listagem dos arquivos do repositório.
+FILES=`ls -1 $REPOSITORIO`
+
+# O número de arquivos do repositório.
+NFILES=`echo $FILES | wc -w`
+
+# Avaliando a opção passada ao script.
+case "$1" in
+   "-c")
+      playContinous
+      ;;
+   
+   "-s")
+      playShuffle
+      ;;
+   
+   *)
+      usage
+      ;;
+esac
+
+# Se chegar aqui, sai com sucesso...
+exit 0
